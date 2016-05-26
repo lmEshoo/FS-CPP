@@ -6,6 +6,7 @@ FileDirectory::FileDirectory() {
 	for(int i = 0; i < 4; i++)
 		for(int j = 0; j < 32; j++)
 			fileDirectory[i][j] = 0;
+	//initialize
 	for(int i = 0; i < 256; i++) fat16[i] = 0;
 	for(int i = 0; i < 1024; i++) actual_memory[i] = 0;
 }//FileDirectory::FileDirectory()
@@ -13,6 +14,7 @@ FileDirectory::FileDirectory() {
 bool FileDirectory::create(char filename[], unsigned int numberBytes){
 	bool unused_entry_found = false;
 	unsigned int entry_index = 0;
+	//is there unused entry?
 	for(int i = 0; i < 4; i++)
 		if(fileDirectory[i][0] == 0) {
 			unused_entry_found = true;
@@ -20,20 +22,17 @@ bool FileDirectory::create(char filename[], unsigned int numberBytes){
 			break;
 		}//if
 
-	unsigned int required_clusters_for_data = (numberBytes + 4) / 4;
-	unsigned int number_of_unused_clusters = 0;
+	unsigned int required_clusters = (numberBytes + 4) / 4;
+	unsigned int unused_clusters = 0;
 	bool enough_unused_clusters = false;
-
+	//count unused clusters
 	for(int i = 2; i < 256; i++)
-	if(fat16[i] == 0 || fat16[i] == 1)
-		number_of_unused_clusters++;
+		if(fat16[i] == 0 || fat16[i] == 1) unused_clusters++;
 
-	if(required_clusters_for_data <= number_of_unused_clusters)
-		enough_unused_clusters = true;
-
+	if( unused_clusters >= required_clusters ) enough_unused_clusters = true;
+	//PUT THE FILE IN THE DIRECTORY
 	if(unused_entry_found && enough_unused_clusters) {
-		for(int j = 0; j < 8; j++)
-			fileDirectory[entry_index][j] = filename[j];
+		for(int j = 0; j < 8; j++) fileDirectory[entry_index][j] = filename[j];
 		return true;
 	}//if
 }//FileDirectory::create(char filename[], unsigned int numberBytes)
@@ -46,7 +45,6 @@ bool FileDirectory::deleteFile(char filename[]){
 	for(i = 0; i < 4; i++){
 		for(j = 0; j < 8; j++)
 			if(filename[j] != fileDirectory[i][j]) break;
-
 		if(j == 8){
 			found = true;
 			break;
@@ -54,20 +52,19 @@ bool FileDirectory::deleteFile(char filename[]){
 	}//for
 
 	if(found == false){
-		return false;
+		return false; //file not found
 	} else{
-		for(j = 0; j < 8; j++) fileDirectory[i][j] = 0;
+		for(j = 0; j < 8; j++) fileDirectory[i][j] = 0; //i is the file
 		firstSectorAddress = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 		i = 0;
 		sectors[i] = firstSectorAddress;
+		//got the firstSectorAddress now initialize the sectors to 0
 		while(fat16[sectors[i]] != 0xFFFF){ //end of file
 			sectors[i + 1] = fat16[sectors[i]];
 			fat16[sectors[i]] = 0;
 			i++;
 		}//while
-		fat16[sectors[i]] = 0;
 	}//else
-
 	return true;
 }//FileDirectory::deleteFile(char filename[])
 
@@ -75,32 +72,32 @@ bool FileDirectory::read(char filename[]){
 	bool found = false;
 	int i, j;
 	unsigned short int sectors[256];
+	//look for the file
 	for(i = 0; i < 4; i++){
-		for(j = 0; j < 8; j++){
+		for(j = 0; j < 8; j++)
 			if(filename[j] != fileDirectory[i][j]) break;
-		}//for
-		if(j == 8){
+		if(j == 8){ //found
 			found = true;
 			break;
 		}//if
 	}//for
 
-	if(i == 4) return false;
-
+	if(i == 4) return false; //couldn't find it
+	//get infor of the file
 	unsigned int firstSectorAddress = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 	unsigned int date = fileDirectory[i][24] * 256 + fileDirectory[i][25];
 	unsigned int time = fileDirectory[i][22] * 256 + fileDirectory[i][23];
 
 	unsigned int year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0;
-
+	//get the ... and print
 	month = (date >> 5) & 0xF;
 	year = (date >> 9) + 1980;
-	day = (date & 0x1F);
+	day = date & 0x1F;
 	second = (time & 0x1F) * 2;
 	hour = time >> 11;
 	minute = (time >> 5) & 0x3F;
-    string tab=(date<10 || minute<10 || second<10)?"\t\t":"\t";
-    cout<<"NEW FILE:"<<endl;
+  string tab=(date<10 || minute<10 || second<10)?"\t\t":"\t";
+  cout<<"NEW FILE:"<<endl;
 	cout << "name:" << "\t" << "Date: " << "\t\t" << "Time: " << "\t\t"
             << "First cluster address: " << "\n";
 	cout << filename << "\t" << month << "/" << day << "/" << year
@@ -111,18 +108,19 @@ bool FileDirectory::write(char filename[], unsigned int numberBytes,
 	unsigned char data[], unsigned int year, unsigned int month, unsigned int day,
 	unsigned int hour, unsigned int minute, unsigned int second){
 	//purpose: to write numberBytes bytes of data from data[] array into the file with the specified file name
-	unsigned short int firstClusterAddress, fileNumber, date, time, fc;
-	unsigned short int lastClusterAddress;
+	unsigned short int firstClusterAddress, lastClusterAddress, k, date, time;
 
-	for(firstClusterAddress = 2; firstClusterAddress < 256; firstClusterAddress++){
-		if(fat16[firstClusterAddress] == 0)
-			break;
-	}//for
-	if(firstClusterAddress == 256) return false;
+	for(firstClusterAddress = 2; firstClusterAddress < 256; firstClusterAddress++)
+		if(fat16[firstClusterAddress] == 0) break; //find first unused cluster
+
+	if(firstClusterAddress == 256) {
+		cout<<"can't find an empty cluster for "<<filename<<endl<<endl;
+		return false; //if no space
+	}
 	int j = 1;
 	lastClusterAddress = firstClusterAddress;
 
-	for(int m = 1; m < (numberBytes / 4) + ((numberBytes % 4 != 0) ? 1 : 0); m++){
+	for(int i = 1; i < (numberBytes / 4) + ((numberBytes % 4 != 0) ? 1 : 0); i++){
 		for(j = 2; j < 256; j++){
 			if((fat16[j] == 0 || fat16[j] == 1) && j != lastClusterAddress){
 				fat16[lastClusterAddress] = j;
@@ -139,61 +137,56 @@ bool FileDirectory::write(char filename[], unsigned int numberBytes,
 
 	fat16[lastClusterAddress] = 0xFFFF; //end of file
 
-	unsigned short int sector_num = 2;
+	unsigned short int p = 2; //initialize starting sector to 2
 
-	while (fat16[sector_num] != 0 && fat16[sector_num] != 1) sector_num++;
+	while (fat16[p] != 0 && fat16[p] != 1) p++; //find where to start
 
-	unsigned int firstSectorAddress = sector_num;
-
-	for(fileNumber = 0; fileNumber < 4; fileNumber++){
-		if (fileDirectory[fileNumber][0] == 0) break;
+	unsigned int firstSectorAddress = p;
+	//which file number
+	for(k = 0; k < 4; k++){
+		if (fileDirectory[k][0] == 0) break;
 	}
-	if(fileNumber == 4) return false;	//file directory is full
-	for(int j = 0; j < 8; j++) fileDirectory[fileNumber][j] = filename[j];	//write file name
+	if(k == 4) return false;	//file directory is full
+	for(int j = 0; j < 8; j++) fileDirectory[k][j] = filename[j];	//write file name
 
 	date = ((year - 1980) << 9) + (month << 5) + day;
-	fileDirectory[fileNumber][24] = date >> 8;	//MSB
-	fileDirectory[fileNumber][25] = date;	//LSB
+	fileDirectory[k][24] = date >> 8;	//MS
+	fileDirectory[k][25] = date;	//LS
 	time = (hour << 11) + (minute << 5) + second / 2;
-	fileDirectory[fileNumber][22] = time >> 8;	//MSB
-	fileDirectory[fileNumber][23] = time;	//LSB
+	fileDirectory[k][22] = time >> 8;	//MS
+	fileDirectory[k][23] = time;	//LS
 
-	fileDirectory[fileNumber][28] = numberBytes >> 24;	//MSB
-	fileDirectory[fileNumber][29] = numberBytes >> 16;		//LSB
-	fileDirectory[fileNumber][30] = numberBytes >> 8;		//MSB
-	fileDirectory[fileNumber][31] = numberBytes;		//LSB
+	fileDirectory[k][28] = numberBytes >> 24;	//MS
+	fileDirectory[k][29] = numberBytes >> 16;	//LS
+	fileDirectory[k][30] = numberBytes >> 8;	//MS
+	fileDirectory[k][31] = numberBytes;	//LS
 
-	fileDirectory[fileNumber][26] = firstClusterAddress >> 8;	//MSB
-	fileDirectory[fileNumber][27] = firstClusterAddress;	//LSB
+	fileDirectory[k][26] = firstClusterAddress >> 8;	//MS
+	fileDirectory[k][27] = firstClusterAddress;	//LS
 
 	for(int i = 0; i < sectors_required; i++) actual_memory[i] = data[i];
 }//FileDirectory::write(...)
 
 bool FileDirectory::printClusters(char filename[]){
-	//print all clusters for file
 	int i, j;
 	for(i = 0; i < 4; i++){
 		for(j = 0; j < 8; j++){
-			if(fileDirectory[i][j] != filename[j])
-				break;
+			if(fileDirectory[i][j] != filename[j]) break;
 		}//for
 		if(j == 8) break;
 	}//for
-	if(i == 4) return false;	//no file with that name
+	if(i == 4) return false;	//if fle not found
 	cout << "\n" << "clusters of " << filename << endl;
-
+	//found the name of the file, now get info
 	unsigned int firstSectorAddress = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 	unsigned int sectorAddress = firstSectorAddress;
-	int k = 1;
-
+	//go through and print until you get to 0xFFFF
 	while(sectorAddress != 0xFFFF){ //end of file
 		cout << sectorAddress << " -> ";
-		k++;
 		sectorAddress = fat16[sectorAddress];
 	}//for
-	cout << "FF" << endl <<endl;
+	cout << "0xFFFF" << endl <<endl;
 }//FileDirectory::printClusters(char filename[])
-
 
 void FileDirectory::printDirectory(){
 	cout << "ls: ";
@@ -212,7 +205,6 @@ void FileDirectory::printDirectory(){
 	return;
 }//FileDirectory::printDirectory()
 
-//Print the data put into a file
 bool FileDirectory::printData(char filename[], unsigned int numberBytes){
 	unsigned int sectors_required = (numberBytes + 4) / 4;
   cout<<"cat "<<filename<<endl;

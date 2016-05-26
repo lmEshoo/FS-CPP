@@ -2,8 +2,6 @@
 #include <iostream>
 #include "filedirectory.h"
 using namespace std;
-#undef EOF
-#define EOF 0xFFFF
 
 FileDirectory::FileDirectory() {
 	for (int i = 0; i < 4; i++)
@@ -62,7 +60,7 @@ bool FileDirectory::deleteFile(char filename[]){
 		first_sector = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 		i = 0;
 		sectors[i] = first_sector;
-		while (fat16[sectors[i]] != EOF){
+		while (fat16[sectors[i]] != 0xFFFF){ //end of file
 			sectors[i + 1] = fat16[sectors[i]];
 			fat16[sectors[i]] = 0;
 			i++;
@@ -118,7 +116,7 @@ bool  FileDirectory::write(char filename[], unsigned int numberBytes,
 	for (firstClusterAddress = 2; firstClusterAddress < 256; firstClusterAddress++){
 		if (fat16[firstClusterAddress] == 0)
 			break;
-	}
+	}//for
 	if (firstClusterAddress == 256) return false;
 	int j = 1;
 	lastClusterAddress = firstClusterAddress;
@@ -129,11 +127,10 @@ bool  FileDirectory::write(char filename[], unsigned int numberBytes,
 				fat16[lastClusterAddress] = j;
 				lastClusterAddress = j;
 				break;
-			}
-		}
+			}//if
+		}//for
 		if (j == 256) return false;
-
-	}
+	}//for
 
 	unsigned int sectors_required = j;
 
@@ -179,8 +176,7 @@ bool FileDirectory::printClusters(char filename[]){
 			if (fileDirectory[i][j] != filename[j])
 				break;
 		}//for
-		if (j == 8)
-			break;
+		if (j == 8) break;
 	}//for
 	if (i == 4) return false;	//no file with that name
 	cout << "File: " << filename << endl;
@@ -204,13 +200,10 @@ void  FileDirectory::printDirectory(){
 	for (int i = 0; i < 4; i++){
 		if (fileDirectory[i][0] != 0){
 			for (int j = 0; j < 32; j++){
-				if (fileDirectory[i][j] == '\0')
-					//if end of file, break
-					break;
-					//otherwise, print
+				//if eof
+				if (fileDirectory[i][j] == '\0') break;
 				cout << fileDirectory[i][j];
 			}//for
-			//space in between file names
 			cout << " ";
 		}//if
 	}//for

@@ -99,10 +99,11 @@ bool  FileDirectory::read(char filename[]){
 	hour = time >> 11;
 	minute = (time >> 5) & 0x3F;
 
-	cout << "File:" << filename << "\n";
-	cout << "Date: " << month << "/" << day << "/" << year << "\n";
-	cout << "Time: " << hour << ":" << minute << ":" << second << "\n";
-	cout << "First cluster address: " << firstSector << "\n";
+    cout<<"NEW FILE:"<<endl;
+	cout << "name:" << "\t" << "Date: " << "\t\t" << "Time: " << "\t\t"
+            << "First cluster address: " << "\n";
+	cout << filename << "\t" << month << "/" << day << "/" << year
+        << "\t" << hour << ":" << minute << ":" << second << "\t" << firstSector << "\n\n";
 }//FileDirectory::read(char filename[])
 
 bool  FileDirectory::write(char filename[], unsigned int numberBytes,
@@ -178,7 +179,7 @@ bool FileDirectory::printClusters(char filename[]){
 		if (j == 8) break;
 	}//for
 	if (i == 4) return false;	//no file with that name
-	cout << "File: " << filename << endl;
+	cout << "\n" << "clusters of " << filename << endl;
 
 	unsigned int firstSector = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 	unsigned int sectorAddress = firstSector;
@@ -189,7 +190,7 @@ bool FileDirectory::printClusters(char filename[]){
 		k++;
 		sectorAddress = fat16[sectorAddress];
 	}//for
-	cout << "EOF" << endl;
+	cout << "FF" << endl <<endl;
 }//FileDirectory::printClusters(char filename[])
 
 
@@ -214,8 +215,8 @@ void  FileDirectory::printDirectory(){
 bool FileDirectory::printData(char filename[], unsigned int numberBytes){
 
 	unsigned int sectors_required = (numberBytes + 4) / 4;
-
-	for (int i = 0; i < sectors_required; i++) cout << actual_memory[i] << " ";
-
+    cout<<"cat "<<filename<<endl;
+	for (int i = 0; i < sectors_required; i++) cout << char(actual_memory[i]);
+    cout<<endl<<endl;
 	return true;
 }//FileDirectory::printData(char filename[], unsigned int numberBytes)

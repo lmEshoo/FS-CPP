@@ -34,7 +34,7 @@ int main(int argc, char **argv){
 	cpp.printDirectory();
 	cpp.printClusters("file3");
 
-	cpp.write("file4", 500, data, 2004, 17, 4, 17, 18, 18);
+	if(cpp.write("file4", 500, data, 2004, 17, 4, 17, 18, 18)==false) cout<<"can't make file\n\n";
 	cpp.read("file4");
 	cpp.printData("file4",500);
 	cpp.printDirectory();

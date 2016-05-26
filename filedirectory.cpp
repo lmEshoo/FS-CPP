@@ -1,4 +1,3 @@
-#include "stdafx.h"
 #include <iostream>
 #include "filedirectory.h"
 using namespace std;

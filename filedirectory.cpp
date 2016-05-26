@@ -7,7 +7,7 @@ FileDirectory::FileDirectory() {
 		for(int j = 0; j < 32; j++)
 			fileDirectory[i][j] = 0;
 	for(int i = 0; i < 256; i++) fat16[i] = 0;
-	//for()
+	for(int i = 0; i < 1024; i++) actual_memory[i] = 0;
 }//FileDirectory::FileDirectory()
 
 bool FileDirectory::create(char filename[], unsigned int numberBytes){

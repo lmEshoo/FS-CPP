@@ -41,7 +41,7 @@ bool FileDirectory::create(char filename[], unsigned int numberBytes){
 bool FileDirectory::deleteFile(char filename[]){
 	bool found = false;
 	int i, j;
-	unsigned short int first_sector, sectors[256];
+	unsigned short int firstSectorAddress, sectors[256];
 	//look for it
 	for(i = 0; i < 4; i++){
 		for(j = 0; j < 8; j++)
@@ -57,9 +57,9 @@ bool FileDirectory::deleteFile(char filename[]){
 		return false;
 	} else{
 		for(j = 0; j < 8; j++) fileDirectory[i][j] = 0;
-		first_sector = fileDirectory[i][26] * 256 + fileDirectory[i][27];
+		firstSectorAddress = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 		i = 0;
-		sectors[i] = first_sector;
+		sectors[i] = firstSectorAddress;
 		while(fat16[sectors[i]] != 0xFFFF){ //end of file
 			sectors[i + 1] = fat16[sectors[i]];
 			fat16[sectors[i]] = 0;
@@ -74,7 +74,7 @@ bool FileDirectory::deleteFile(char filename[]){
 bool FileDirectory::read(char filename[]){
 	bool found = false;
 	int i, j;
-	unsigned short int first_sector, sectors[256];
+	unsigned short int sectors[256];
 	for(i = 0; i < 4; i++){
 		for(j = 0; j < 8; j++){
 			if(filename[j] != fileDirectory[i][j]) break;
@@ -87,7 +87,7 @@ bool FileDirectory::read(char filename[]){
 
 	if(i == 4) return false;
 
-	unsigned int firstSector = fileDirectory[i][26] * 256 + fileDirectory[i][27];
+	unsigned int firstSectorAddress = fileDirectory[i][26] * 256 + fileDirectory[i][27];
 	unsigned int date = fileDirectory[i][24] * 256 + fileDirectory[i][25];
 	unsigned int time = fileDirectory[i][22] * 256 + fileDirectory[i][23];
 
@@ -99,12 +99,12 @@ bool FileDirectory::read(char filename[]){
 	second = (time & 0x1F) * 2;
 	hour = time >> 11;
 	minute = (time >> 5) & 0x3F;
-
+    string tab=(date<10 || minute<10 || second<10)?"\t\t":"\t";
     cout<<"NEW FILE:"<<endl;
 	cout << "name:" << "\t" << "Date: " << "\t\t" << "Time: " << "\t\t"
             << "First cluster address: " << "\n";
 	cout << filename << "\t" << month << "/" << day << "/" << year
-        << "\t" << hour << ":" << minute << ":" << second << "\t" << firstSector << "\n\n";
+        << "\t" << hour << ":" << minute << ":" << second << tab << firstSectorAddress << "\n\n";
 }//FileDirectory::read(char filename[])
 
 bool FileDirectory::write(char filename[], unsigned int numberBytes,
@@ -143,7 +143,7 @@ bool FileDirectory::write(char filename[], unsigned int numberBytes,
 
 	while (fat16[sector_num] != 0 && fat16[sector_num] != 1) sector_num++;
 
-	unsigned int firstsector = sector_num;
+	unsigned int firstSectorAddress = sector_num;
 
 	for(fileNumber = 0; fileNumber < 4; fileNumber++){
 		if (fileDirectory[fileNumber][0] == 0) break;
@@ -182,8 +182,8 @@ bool FileDirectory::printClusters(char filename[]){
 	if(i == 4) return false;	//no file with that name
 	cout << "\n" << "clusters of " << filename << endl;
 
-	unsigned int firstSector = fileDirectory[i][26] * 256 + fileDirectory[i][27];
-	unsigned int sectorAddress = firstSector;
+	unsigned int firstSectorAddress = fileDirectory[i][26] * 256 + fileDirectory[i][27];
+	unsigned int sectorAddress = firstSectorAddress;
 	int k = 1;
 
 	while(sectorAddress != 0xFFFF){ //end of file

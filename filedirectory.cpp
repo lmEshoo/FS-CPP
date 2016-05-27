@@ -105,7 +105,7 @@ bool FileDirectory::read(char filename[]){
 }//FileDirectory::read(char filename[])
 
 bool FileDirectory::write(char filename[], unsigned int numberBytes,
-	unsigned char data[], unsigned int year, unsigned int month, unsigned int day,
+	char data[], unsigned int year, unsigned int month, unsigned int day,
 	unsigned int hour, unsigned int minute, unsigned int second){
 	//purpose: to write numberBytes bytes of data from data[] array into the file with the specified file name
 	unsigned short int firstClusterAddress, lastClusterAddress, k, date, time;
